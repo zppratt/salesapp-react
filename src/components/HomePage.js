@@ -61,11 +61,13 @@ const HomePage = () => {
         // Dynamically import JSON data using import()
         const jsonData = await import('./customer_data.json');
 
-        // Access the imported JSON data
-        console.log(jsonData);
+        // Calculate RFM score for each customer and add it to the data
+        const dataWithRFMScore = jsonData.default.map(customer => ({
+          ...customer,
+          rfmScore: calculateTotalRFMScore(customer),
+        }));
 
-        // If you want to set the data to state
-        setData(jsonData.default); // Use .default as import() returns a module object
+        setData(dataWithRFMScore);
       } catch (error) {
         console.error('Error loading JSON data:', error);
       }
@@ -89,7 +91,7 @@ const HomePage = () => {
   // Function to filter customers based on the total RFM score within a range
   function filterCustomersByRFMScore(customersList, lowerBound, upperBound) {
     return customersList.filter(customer => {
-      const totalRFMScore = calculateTotalRFMScore(customer);
+      const totalRFMScore = customer.rfmScore;
       return totalRFMScore >= lowerBound && totalRFMScore <= upperBound;
     });
   }
