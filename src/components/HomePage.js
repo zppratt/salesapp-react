@@ -1,34 +1,134 @@
 // src/components/HomePage.js
-import React from 'react';
-import { Container, Typography } from '@mui/material';
-import CustomerList from './CustomerList';
+import { Container, Grid, Typography } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import CustomerCard from './CustomerCard';
 
-const customers = [
-    { id: 1, name: 'John Doe', email: 'john@example.com', productPreference: 'Electronics' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', productPreference: 'Clothing' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', productPreference: 'Books' },
-    { id: 4, name: 'Alice Brown', email: 'alice@example.com', productPreference: 'Home Decor' },
-    { id: 5, name: 'Charlie Wilson', email: 'charlie@example.com', productPreference: 'Sports Equipment' },
-    { id: 6, name: 'Eva Martinez', email: 'eva@example.com', productPreference: 'Beauty Products' },
-    { id: 7, name: 'Frank Rodriguez', email: 'frank@example.com', productPreference: 'Kitchen Appliances' },
-    { id: 8, name: 'Grace Lee', email: 'grace@example.com', productPreference: 'Toys and Games' },
-    { id: 9, name: 'Henry Turner', email: 'henry@example.com', productPreference: 'Furniture' },
-    { id: 10, name: 'Ivy Nguyen', email: 'ivy@example.com', productPreference: 'Jewelry' },
-    { id: 11, name: 'Jack Anderson', email: 'jack@example.com', productPreference: 'Outdoor Gear' },
-    { id: 12, name: 'Kelly Davis', email: 'kelly@example.com', productPreference: 'Fitness Equipment' },
-    { id: 13, name: 'Liam Moore', email: 'liam@example.com', productPreference: 'Music Instruments' },
-    { id: 14, name: 'Mia Taylor', email: 'mia@example.com', productPreference: 'Pet Supplies' },
-    // Add more customer data as needed
-  ];
-  
+function calculateRScore(customer) {
+  const currentDate = new Date();
+  const lastPurchaseDate = new Date(customer.lastPurchaseDate);
+  const daysSinceLastPurchase = Math.floor((currentDate - lastPurchaseDate) / (1000 * 60 * 60 * 24));
+
+  if (daysSinceLastPurchase < 90) {
+    return 3;
+  } else if (daysSinceLastPurchase < 180) {
+    return 2;
+  } else {
+    return 1;
+  }
+}
+
+function calculateFScore(customer) {
+  const numPurchasesLast30Days = customer.numPurchasesLast30Days;
+
+  if (numPurchasesLast30Days >= 3) {
+    return 3;
+  } else if (numPurchasesLast30Days >= 2) {
+    return 2;
+  } else {
+    return 1;
+  }
+}
+
+function calculateMScore(customer) {
+  const lifetimeTotal = customer.lifetimeTotal;
+
+  if (lifetimeTotal >= 3000) {
+    return 3;
+  } else if (lifetimeTotal >= 2000) {
+    return 2;
+  } else {
+    return 1;
+  }
+}
+
+function calculateTotalRFMScore(customer) {
+  const rScore = calculateRScore(customer);
+  const fScore = calculateFScore(customer);
+  const mScore = calculateMScore(customer);
+
+  return rScore + fScore + mScore;
+}
 
 const HomePage = () => {
+
+  // State to store the JSON data
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    // Async function to dynamically import JSON data
+    const fetchData = async () => {
+      try {
+        // Dynamically import JSON data using import()
+        const jsonData = await import('./customer_data.json');
+
+        // Access the imported JSON data
+        console.log(jsonData);
+
+        // If you want to set the data to state
+        setData(jsonData.default); // Use .default as import() returns a module object
+      } catch (error) {
+        console.error('Error loading JSON data:', error);
+      }
+    };
+
+    // Call the async function
+    fetchData();
+  }, []);
+
+  // Function to render a list of customers
+  const renderCustomerList = (customers) => {
+    return customers.map((customer) => (
+      <CustomerCard key={customer.id} customer={customer} />
+    ));
+  };
+
+  if (!data) {
+    return <p>Loading...</p>;
+  }
+
+  // Function to filter customers based on the total RFM score within a range
+  function filterCustomersByRFMScore(customersList, lowerBound, upperBound) {
+    return customersList.filter(customer => {
+      const totalRFMScore = calculateTotalRFMScore(customer);
+      return totalRFMScore >= lowerBound && totalRFMScore <= upperBound;
+    });
+  }
+
+  const vipCustomers = filterCustomersByRFMScore(data, 5, 8);
+  const salesCustomers = filterCustomersByRFMScore(data, 3, 5);
+  const atRiskCustomers = filterCustomersByRFMScore(data, 0, 3);
+
   return (
     <Container>
       <Typography variant="h2" align="center" gutterBottom>
         Sales Dashboard
       </Typography>
-      <CustomerList customers={customers} />
+      <Grid container spacing={2}>
+        {/* First Column */}
+        <Grid item xs={12} sm={12} md={4} lg={4}>
+          <Typography variant="h6" align="center" gutterBottom>
+            VIP Customer List
+          </Typography>
+          {renderCustomerList(vipCustomers)}
+        </Grid>
+
+        {/* Second Column */}
+        <Grid item xs={12} sm={12} md={4} lg={4}>
+          <Typography variant="h6" align="center" gutterBottom>
+            Sales Customer List
+          </Typography>
+          {renderCustomerList(salesCustomers)}
+        </Grid>
+
+        {/* Third Column */}
+        <Grid item xs={12} sm={12} md={4} lg={4}>
+          <Typography variant="h6" align="center" gutterBottom>
+            At Risk Customer List
+          </Typography>
+          {renderCustomerList(atRiskCustomers)}
+        </Grid>
+      </Grid>
+
     </Container>
   );
 };
